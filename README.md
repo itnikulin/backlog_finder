@@ -2,6 +2,8 @@
 
 Privacy-first Product Backlog Advisor for Kilo Code. It reads live Kaiten data through a local read-only MCP server and sends analysis only to a separately configured internal AI endpoint.
 
+Подробная русскоязычная инструкция: [`docs/SETUP_RU.md`](docs/SETUP_RU.md).
+
 ## Data boundary
 
 There are two independent credentials:
