@@ -1,29 +1,29 @@
 # Backlog Finder
 
-Privacy-first Product Backlog Advisor for Kilo Code. It reads live Kaiten data through a local read-only MCP server and sends analysis only to a separately configured internal AI endpoint.
+Советник по продуктовому бэклогу для Kilo Code с закрытым контуром обработки данных. Агент получает актуальный бэклог Kaiten через локальный MCP-сервер в режиме «только чтение» и отправляет данные для анализа только в отдельно настроенную внутреннюю ИИ-модель.
 
-Подробная русскоязычная инструкция: [`docs/SETUP_RU.md`](docs/SETUP_RU.md).
+Подробная инструкция по установке и настройке: [`docs/SETUP_RU.md`](docs/SETUP_RU.md).
 
-## Data boundary
+## Контур данных
 
-There are two independent credentials:
+Система использует два независимых ключа:
 
-- `KAITEN_API_TOKEN` is read only by the local MCP process and is used only against your Kaiten company domain.
-- `INTERNAL_AI_API_KEY` is read by Kilo Code and is used only against the internal model endpoint configured in your untracked `kilo.jsonc`.
+- `KAITEN_API_TOKEN` читает только локальный MCP-процесс и использует исключительно для обращения к корпоративному домену Kaiten;
+- `INTERNAL_AI_API_KEY` читает Kilo Code и использует исключительно для обращения к внутренней модели, настроенной в локальном `kilo.jsonc`.
 
-Do not paste either key into prompts, source files, GitHub settings visible to untrusted users, or logs.
+Не вставляйте ключи в запросы агенту, исходный код, общедоступные настройки GitHub или журналы работы.
 
-## First setup
+## Быстрая настройка
 
-Requirements: Node.js 20+, Kilo Code, network access from your workstation to Kaiten and the internal AI endpoint.
+Понадобятся Node.js 20 или новее, Kilo Code, сетевой доступ к Kaiten и внутреннему API ИИ-модели.
 
-1. Install dependencies:
+1. Установите зависимости:
 
    ```bash
    npm install
    ```
 
-2. Export the Kaiten credential in the shell that launches Kilo Code:
+2. Передайте ключи через окружение терминала, из которого запускается Kilo Code:
 
    ```bash
    export KAITEN_BASE_URL="https://your-company.kaiten.ru"
@@ -31,52 +31,54 @@ Requirements: Node.js 20+, Kilo Code, network access from your workstation to Ka
    export INTERNAL_AI_API_KEY="..."
    ```
 
-   Prefer a corporate secret manager. `.env` is ignored, but this project does not load it automatically.
+   Предпочтительно использовать корпоративное хранилище секретов. Файл `.env` исключён из Git, но проект не загружает его автоматически.
 
-3. Merge `config/kilo.global.example.jsonc` into your trusted global Kilo configuration at `~/.config/kilo/kilo.jsonc`. Replace:
+3. Объедините настройки из `config/kilo.global.example.jsonc` с доверенной глобальной конфигурацией `~/.config/kilo/kilo.jsonc`. Замените:
 
-   - the internal AI `baseURL`;
-   - `replace-model-id` in both the selected model and provider model map;
-   - `/ABSOLUTE/PATH/TO/backlog_finder` with the real clone location;
-   - context and output limits if your model differs.
+   - `baseURL` внутренней ИИ-модели;
+   - `replace-model-id` в выбранной модели и конфигурации провайдера;
+   - `/ABSOLUTE/PATH/TO/backlog_finder` на абсолютный путь к клонированному репозиторию;
+   - размеры контекстного окна и ответа, если они отличаются у вашей модели.
 
-   The credentials remain `{env:...}` references. Kilo intentionally does not interpolate secrets in an untrusted project configuration.
+   Оставьте ключи в виде ссылок `{env:...}`. Kilo не подставляет секреты из недоверенной проектной конфигурации.
 
-4. Optionally copy `kilo.project.example.jsonc` to `kilo.jsonc` for project-level instructions and permissions. This file contains no secrets.
+4. При необходимости скопируйте `kilo.project.example.jsonc` в `kilo.jsonc`, чтобы подключить проектные инструкции и разрешения. Этот файл не содержит секретов.
 
-5. Ensure the Kilo Gateway session is logged out and autocomplete is disabled or configured for the same internal provider.
+5. Выйдите из Kilo Gateway. Отключите автодополнение либо настройте его на тот же внутренний провайдер.
 
-6. Fill in `context/product-passport.md`, especially outcomes, constraints, Kaiten space/board scope, and custom-property mapping.
+6. Заполните `context/product-passport.md`: результаты, ограничения, пространства и доски Kaiten, соответствие пользовательских полей.
 
-7. Open the repository in Kilo Code and select the `backlog-advisor` agent.
+7. Откройте репозиторий в Kilo Code и выберите агента `backlog-advisor`.
 
-## Suggested first prompts
+## Первые запросы
 
-- `List the available Kaiten spaces and show me which boards should be added to the product passport.`
-- `/prioritize-backlog for board 123; exclude done cards.`
-- `/build-roadmap for the next six months using Now / Next / Later.`
-- `/update-product-context Retention is now more important than acquisition this quarter.`
+- `Покажи доступные пространства Kaiten и предложи, какие доски добавить в паспорт продукта.`
+- `/prioritize-backlog для доски 123. Исключи завершённые карточки.`
+- `/build-roadmap на ближайшие шесть месяцев в формате Now / Next / Later.`
+- `/update-product-context В этом квартале удержание пользователей важнее привлечения.`
 
-## Advisor phase
+## Режим советника
 
-The MCP server intentionally exposes only read tools. If a user asks to change Kaiten, the agent returns a proposed change set but cannot apply it. Write tools should be added only after the team validates the recommendations and agrees on confirmation and audit rules.
+MCP-сервер намеренно предоставляет только инструменты чтения. Если пользователь просит изменить Kaiten, агент формирует предлагаемый пакет изменений, но не может его применить.
 
-## MCP tools
+Инструменты записи следует добавлять только после проверки качества рекомендаций и согласования правил подтверждения и аудита.
 
-- `list_spaces`
-- `get_space`
-- `list_cards`
-- `get_card`
-- `get_card_comments`
-- `get_card_location_history`
+## Инструменты MCP
 
-The card list tool uses `GET /api/latest/cards` with pagination and compact responses. It can fetch up to 25 pages per call, but the agent is instructed to query narrow scopes and load details only when needed.
+- `list_spaces`;
+- `get_space`;
+- `list_cards`;
+- `get_card`;
+- `get_card_comments`;
+- `get_card_location_history`.
 
-## Verification
+Инструмент получения списка карточек использует `GET /api/latest/cards`, поддерживает пагинацию и возвращает компактные ответы. За один вызов он может получить до 25 страниц, но агенту предписано ограничивать область анализа и запрашивать подробности только для выбранных карточек.
+
+## Проверка проекта
 
 ```bash
 npm run check
 npm test
 ```
 
-Tests use mocked HTTP responses and never require real credentials.
+Тесты используют имитацию HTTP-ответов, не обращаются к реальному Kaiten и не требуют настоящих ключей.
