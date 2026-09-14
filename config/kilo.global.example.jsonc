@@ -1,0 +1,47 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+
+  // Merge this example into ~/.config/kilo/kilo.jsonc.
+  // Global config is trusted, so Kilo can resolve {env:...} without committing secrets.
+  "model": "internal-ai/replace-model-id",
+  "small_model": "internal-ai/replace-model-id",
+  "enabled_providers": ["internal-ai"],
+
+  "provider": {
+    "internal-ai": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Internal AI",
+      "options": {
+        "baseURL": "https://replace-with-internal-ai.example/v1",
+        "apiKey": "{env:INTERNAL_AI_API_KEY}"
+      },
+      "models": {
+        "replace-model-id": {
+          "name": "Internal backlog model",
+          "tool_call": true,
+          "reasoning": true,
+          "limit": {
+            "context": 128000,
+            "output": 16000
+          }
+        }
+      }
+    }
+  },
+
+  "mcp": {
+    "kaiten": {
+      "type": "local",
+      "command": [
+        "node",
+        "/ABSOLUTE/PATH/TO/backlog_finder/src/server.mjs"
+      ],
+      "environment": {
+        "KAITEN_BASE_URL": "{env:KAITEN_BASE_URL}",
+        "KAITEN_API_TOKEN": "{env:KAITEN_API_TOKEN}"
+      },
+      "enabled": true,
+      "timeout": 30000
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "backlog-finder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A privacy-first Kilo Code backlog advisor backed by Kaiten and an internal AI endpoint.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start:mcp": "node src/server.mjs",
+    "check": "node --check src/config.mjs && node --check src/kaiten-client.mjs && node --check src/server.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "^3.25.76"
+  }
+}
