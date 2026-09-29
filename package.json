@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "init:context": "node scripts/init-context.mjs",
     "start:mcp": "node src/server.mjs",
     "check": "node --check src/config.mjs && node --check src/kaiten-client.mjs && node --check src/server.mjs",
     "test": "node --test"

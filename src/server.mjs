@@ -34,12 +34,16 @@ export function createServer(client) {
     "list_spaces",
     {
       title: "List Kaiten spaces",
-      description: "List accessible Kaiten spaces. Space responses include their board placements.",
-      inputSchema: {},
+      description: "List spaces containing allowed boards only. Follow next_offset while truncated, even when spaces is empty.",
+      inputSchema: {
+        limit: z.number().int().min(1).max(100).default(100),
+        offset: z.number().int().min(0).default(0),
+        max_pages: z.number().int().min(1).max(25).default(10),
+      },
     },
-    async () => {
+    async ({ max_pages, ...options }) => {
       try {
-        return jsonResult(await client.listSpaces());
+        return jsonResult(await client.listSpaces({ ...options, maxPages: max_pages }));
       } catch (error) {
         return errorResult(error);
       }
@@ -71,7 +75,7 @@ export function createServer(client) {
       description: "Retrieve a paginated, compact backlog slice. Fetch full card details only for shortlisted cards.",
       inputSchema: {
         space_id: z.number().int().positive().optional(),
-        board_id: z.number().int().positive().optional(),
+        board_id: z.number().int().positive(),
         column_ids: z.array(z.number().int().positive()).optional(),
         exclude_column_ids: z.array(z.number().int().positive()).optional(),
         owner_ids: z.array(z.number().int().positive()).optional(),

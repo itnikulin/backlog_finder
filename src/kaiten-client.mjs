@@ -50,6 +50,11 @@ export class KaitenClient {
   constructor(config, options = {}) {
     this.baseUrl = config.baseUrl;
     this.token = config.token;
+    if (!Array.isArray(config.allowedBoardIds) || !config.allowedBoardIds.length ||
+        config.allowedBoardIds.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
+      throw new Error("KAITEN_ALLOWED_BOARD_IDS is required and must contain positive integer IDs");
+    }
+    this.allowedBoardIds = new Set(config.allowedBoardIds);
     this.apiVersion = config.apiVersion || "latest";
     this.requestTimeoutMs = config.requestTimeoutMs || 30_000;
     this.fetch = options.fetch || globalThis.fetch;
@@ -68,7 +73,7 @@ export class KaitenClient {
     return url;
   }
 
-  async request(path, { query, method = "GET" } = {}) {
+  async #request(path, { query } = {}) {
     const url = this.buildUrl(path, query);
 
     for (let attempt = 0; ; attempt += 1) {
@@ -77,7 +82,8 @@ export class KaitenClient {
 
       try {
         const response = await this.fetch(url, {
-          method,
+          method: "GET",
+          redirect: "error",
           headers: {
             Accept: "application/json",
             Authorization: `Bearer ${this.token}`,
@@ -91,9 +97,8 @@ export class KaitenClient {
         }
 
         if (!response.ok) {
-          const body = await response.text();
-          const safeBody = body.slice(0, 500);
-          throw new Error(`Kaiten API ${response.status}: ${safeBody || response.statusText}`);
+          // Do not relay potentially sensitive upstream bodies into model context.
+          throw new Error(`Kaiten API ${response.status}`);
         }
 
         if (response.status === 204) return null;
@@ -104,27 +109,66 @@ export class KaitenClient {
     }
   }
 
-  listSpaces() {
-    return this.request("/spaces");
+  assertBoard(boardId) {
+    if (!this.allowedBoardIds.has(boardId)) throw new Error("Board outside configured Kaiten scope");
   }
 
-  getSpace(spaceId) {
-    return this.request(`/spaces/${spaceId}`);
+  scopedSpace(space) {
+    const boards = (Array.isArray(space?.boards) ? space.boards : [])
+      .filter((board) => this.allowedBoardIds.has(board.board_id ?? board.id))
+      .map((board) => ({ id: board.board_id ?? board.id, title: board.title }));
+    // Never return nested cards, unrelated boards, descriptions or email keys.
+    return boards.length ? { id: space.id, title: space.title, boards } : null;
   }
 
-  getCard(cardId) {
-    return this.request(`/cards/${cardId}`, { query: { broken_api: false } });
+  async listSpaces({ limit = 100, offset = 0, maxPages = 10 } = {}) {
+    const spaces = [];
+    let pagesFetched = 0;
+    let scanned = 0;
+    let fullPage = false;
+    while (pagesFetched < maxPages) {
+      const page = await this.#request("/spaces", { query: { limit, offset: offset + scanned } });
+      if (!Array.isArray(page)) throw new Error("Unexpected Kaiten space list response");
+      spaces.push(...page.map((space) => this.scopedSpace(space)).filter(Boolean));
+      scanned += page.length;
+      pagesFetched += 1;
+      fullPage = page.length === limit;
+      if (!fullPage) break;
+    }
+    return { spaces, page_size: limit, pages_fetched: pagesFetched,
+      truncated: fullPage && pagesFetched === maxPages, next_offset: offset + scanned };
   }
 
-  getCardComments(cardId, { limit = 100, offset = 0 } = {}) {
-    return this.request(`/cards/${cardId}/comments`, { query: { limit, offset } });
+  async getSpace(spaceId) {
+    const space = this.scopedSpace(await this.#request(`/spaces/${spaceId}`));
+    if (!space) throw new Error("Space outside configured Kaiten scope");
+    return space;
   }
 
-  getCardLocationHistory(cardId) {
-    return this.request(`/cards/${cardId}/location-history`);
+  async getCard(cardId) {
+    // Resolve current membership on every call; never trust a stale session cache.
+    const card = await this.#request(`/cards/${cardId}`, { query: { broken_api: false } });
+    this.assertBoard(card?.board_id ?? card?.board?.id);
+    return card;
+  }
+
+  async getCardComments(cardId, { limit = 100, offset = 0 } = {}) {
+    await this.getCard(cardId);
+    const comments = await this.#request(`/cards/${cardId}/comments`, { query: { limit, offset } });
+    await this.getCard(cardId);
+    return comments;
+  }
+
+  async getCardLocationHistory(cardId) {
+    await this.getCard(cardId);
+    const history = await this.#request(`/cards/${cardId}/location-history`);
+    await this.getCard(cardId);
+    if (!Array.isArray(history)) throw new Error("Unexpected Kaiten history response");
+    return history.filter((event) => this.allowedBoardIds.has(event.board_id));
   }
 
   async listCards({ maxPages = 10, compact = true, ...filters } = {}) {
+    this.assertBoard(filters.board_id);
     const pageSize = Math.min(Math.max(Number(filters.limit || 100), 1), 100);
     const firstOffset = Math.max(Number(filters.offset || 0), 0);
     const cards = [];
@@ -132,7 +176,7 @@ export class KaitenClient {
 
     while (pagesFetched < maxPages) {
       const offset = firstOffset + pagesFetched * pageSize;
-      const page = await this.request("/cards", {
+      const page = await this.#request("/cards", {
         query: {
           ...filters,
           limit: pageSize,
@@ -143,6 +187,13 @@ export class KaitenClient {
 
       if (!Array.isArray(page)) {
         throw new Error("Unexpected Kaiten card list response");
+      }
+
+      // Fail closed if the API ignores the board filter or omits board identity.
+      for (const card of page) {
+        if ((card.board_id ?? card.board?.id) !== filters.board_id) {
+          throw new Error("Card list outside configured Kaiten scope");
+        }
       }
 
       cards.push(...page);

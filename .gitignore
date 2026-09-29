@@ -1,5 +1,11 @@
 node_modules/
 .env
+.env.*
+!.env.example
+/context/
+/private/
+/config/*.local.json
+/config/*.local.jsonc
 kilo.json
 kilo.jsonc
 *.log

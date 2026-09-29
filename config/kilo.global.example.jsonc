@@ -1,7 +1,8 @@
 {
   "$schema": "https://app.kilo.ai/config.json",
 
-  // Merge this example into ~/.config/kilo/kilo.jsonc.
+  // НЕ ГОТОВЫЙ КОНФИГ: сначала замените все replace-* и REQUIRED_*.
+  // Merge the completed example into ~/.config/kilo/kilo.jsonc.
   // Global config is trusted, so Kilo can resolve {env:...} without committing secrets.
   "model": "internal-ai/replace-model-id",
   "small_model": "internal-ai/replace-model-id",
@@ -18,11 +19,14 @@
       "models": {
         "replace-model-id": {
           "name": "Internal backlog model",
-          "tool_call": true,
-          "reasoning": true,
+          // Включить только после подтверждения и теста tool calling.
+          "tool_call": false,
+          // reasoning намеренно не задан: уточните поддержку у AI-команды.
           "limit": {
-            "context": 128000,
-            "output": 16000
+            // Замените строки ниже реальными положительными ЧИСЛАМИ без кавычек.
+            // Эти заглушки намеренно не проходят проверку схемы Kilo.
+            "context": "REQUIRED_CONTEXT_TOKENS",
+            "output": "REQUIRED_OUTPUT_TOKENS"
           }
         }
       }
@@ -38,9 +42,11 @@
       ],
       "environment": {
         "KAITEN_BASE_URL": "{env:KAITEN_BASE_URL}",
-        "KAITEN_API_TOKEN": "{env:KAITEN_API_TOKEN}"
+        "KAITEN_API_TOKEN": "{env:KAITEN_API_TOKEN}",
+        "KAITEN_ALLOWED_BOARD_IDS": "{env:KAITEN_ALLOWED_BOARD_IDS}"
       },
-      "enabled": true,
+      // Включите после настройки модели и списка разрешённых досок.
+      "enabled": false,
       "timeout": 30000
     }
   }

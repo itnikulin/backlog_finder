@@ -18,6 +18,7 @@ test("stdio MCP server exposes only the advisor-phase read tools", async () => {
     env: {
       KAITEN_BASE_URL: "https://example.kaiten.ru",
       KAITEN_API_TOKEN: "test-token",
+      KAITEN_ALLOWED_BOARD_IDS: "9",
     },
     stderr: "pipe",
   });
@@ -36,6 +37,14 @@ test("stdio MCP server exposes only the advisor-phase read tools", async () => {
       "list_spaces",
     ]);
     assert.equal(names.some((name) => /create|delete|move|update|write/.test(name)), false);
+    const cardsTool = result.tools.find((tool) => tool.name === "list_cards");
+    assert.ok(cardsTool.inputSchema.required.includes("board_id"));
+    const spacesTool = result.tools.find((tool) => tool.name === "list_spaces");
+    assert.ok(spacesTool.inputSchema.properties.offset);
+    assert.ok(spacesTool.inputSchema.properties.max_pages);
+    const denied = await client.callTool({ name: "list_cards", arguments: { board_id: 999 } });
+    assert.equal(denied.isError, true);
+    assert.match(denied.content[0].text, /outside configured Kaiten scope/);
   } finally {
     await client.close();
   }

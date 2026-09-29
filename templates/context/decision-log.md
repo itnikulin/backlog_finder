@@ -1,4 +1,4 @@
-# Decision Log
+# Decision Log — template
 
 Record only decisions that should influence future prioritization. Do not copy entire discussions or backlog exports.
 

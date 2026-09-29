@@ -16,6 +16,7 @@ test("buildUrl uses the configured company domain and API version", () => {
       baseUrl: "https://example.kaiten.ru",
       token: "token",
       apiVersion: "latest",
+      allowedBoardIds: [9, 42],
     },
     { fetch: async () => jsonResponse({}) },
   );
@@ -33,11 +34,12 @@ test("request sends bearer authentication without exposing the token in the URL"
       baseUrl: "https://example.kaiten.ru",
       token: "private-token",
       apiVersion: "latest",
+      allowedBoardIds: [9],
     },
     {
       fetch: async (url, options) => {
         captured = { url: url.toString(), options };
-        return jsonResponse({ id: 1 });
+        return jsonResponse({ id: 1, board_id: 9 });
       },
     },
   );
@@ -62,6 +64,7 @@ test("listCards paginates and compacts the response", async () => {
       baseUrl: "https://example.kaiten.ru",
       token: "token",
       apiVersion: "latest",
+      allowedBoardIds: [9],
     },
     {
       fetch: async (url) => {

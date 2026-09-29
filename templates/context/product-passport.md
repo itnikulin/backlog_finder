@@ -1,4 +1,4 @@
-# Product Passport
+# Product Passport — template
 
 > Keep this document compact. Record durable product facts, not copied backlog content.
 
